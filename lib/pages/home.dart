@@ -1,10 +1,14 @@
+import 'package:chatting_app_2/helper/GetServerKey.dart';
 import 'package:chatting_app_2/helper/firebase_helper.dart';
 import 'package:chatting_app_2/models/user.dart';
 import 'package:chatting_app_2/pages/search_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import '../helper/message_service.dart';
+import '../helper/notification_services.dart';
 import '../models/chat_room.dart';
 import 'chatting_page.dart';
 
@@ -20,6 +24,47 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   UserModel? targetUser;
   final Uuid uuid = Uuid();
+  NotificationServices notificationServices = NotificationServices();
+  final MessageService _messageService = MessageService();
+
+  void loadToken() async{
+    String? token = await notificationServices.getDeviceToken();
+
+    print(token);
+
+    // notificationServices.sendNotificationToTarget(token!,RemoteMessage(
+    //   notification: RemoteNotification(
+    //     title: "Test",
+    //     body: "hello from another device"
+    //   )
+    // ));h
+
+
+
+
+
+  }
+
+
+  @override
+  void initState() {
+    // e-C3_PA0T2KYCHQb6tDYlW:APA91bFOgjf
+    notificationServices.initLocalNotificationPlugin();
+    notificationServices.requestNotificationPermission();
+    notificationServices.firebaseInit();
+    // notificationServices.showNotification(
+    //   RemoteMessage(
+    //     notification: RemoteNotification(
+    //         title: "Noti",
+    //         body: "this is noti"
+    //     )
+    //   )
+    // );
+    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+    loadToken();
+    // token
+
+  }
 
   Future<ChatRoom?> getChatRoom(UserModel user, UserModel targetUser) async {
     ChatRoom? chatRoom;

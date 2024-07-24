@@ -1,5 +1,7 @@
 import 'package:chatting_app_2/helper/firebase_helper.dart';
+import 'package:chatting_app_2/helper/notification_services.dart';
 import 'package:chatting_app_2/pages/sign_up.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../helper/widget_helper.dart';
@@ -39,7 +41,12 @@ class _LoginState extends State<Login> {
 
       if(userCredential!=null){
         UserModel? user = await FirebaseHelper.getUserModelById(userCredential.user!.uid);
-        Navigator.push(context, MaterialPageRoute(builder: (context)=> Home(userModel: user!,firebaseUser: userCredential!.user,)));
+        NotificationServices notificationServices = NotificationServices();
+        user!.deviceToken = await notificationServices.getDeviceToken();
+        await FirebaseFirestore.instance.collection("user").doc(user?.uid).set(
+            user!.toMap());
+        Navigator.push(context, MaterialPageRoute(
+            builder: (context)=> Home(userModel: user!,firebaseUser: userCredential!.user,)));
       }
 
       

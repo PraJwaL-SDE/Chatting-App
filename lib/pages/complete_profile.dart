@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../helper/notification_services.dart';
 import '../models/user.dart';
 import 'home.dart';
 
@@ -24,6 +25,7 @@ class CompleteProfile extends StatefulWidget {
 
 class _CompleteProfileState extends State<CompleteProfile> {
   TextEditingController _controller = TextEditingController();
+  NotificationServices notificationServices = NotificationServices();
   File? imageFile;
   void selectImage(ImageSource imageSource) async{
     ImagePicker imagePicker = ImagePicker();
@@ -98,8 +100,10 @@ class _CompleteProfileState extends State<CompleteProfile> {
     UserModel? user = widget.userModel;
     user?.profilePic = imageUrl;
     user?.name = name;
+    user!.deviceToken = await notificationServices.getDeviceToken();
     await FirebaseFirestore.instance.collection("user").doc(user?.uid).set(
         user!.toMap());
+
     User? firebaseUser = widget.firebaseUser;
     Navigator.push(context,
         MaterialPageRoute(

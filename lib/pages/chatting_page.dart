@@ -1,9 +1,11 @@
+import 'package:chatting_app_2/helper/notification_services.dart';
 import 'package:chatting_app_2/helper/widget_helper.dart';
 import 'package:chatting_app_2/models/chat_room.dart';
 import 'package:chatting_app_2/models/message.dart';
 import 'package:chatting_app_2/models/user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -28,6 +30,14 @@ class ChattingPage extends StatefulWidget {
 class _ChattingPageState extends State<ChattingPage> {
   TextEditingController msgEditingController = TextEditingController();
   Uuid uuid = Uuid();
+  NotificationServices notificationServices = NotificationServices();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+  }
 
   void sendMsg() {
     String msgText = msgEditingController.text.trim();
@@ -39,12 +49,22 @@ class _ChattingPageState extends State<ChattingPage> {
       seen: false,
       createdOn: DateTime.now(),
     );
+
     FirebaseFirestore.instance
         .collection("chatrooms")
         .doc(widget.chatRoom.id)
         .collection("messages")
         .doc(message.messageId)
         .set(message.toMap());
+    notificationServices.sendNotificationToTarget(
+    widget.targetUser!.deviceToken!,
+        RemoteMessage(
+          notification: RemoteNotification(
+            title: widget.targetUser.name!,
+            body: msgText,
+
+          )
+        ));
     msgEditingController.clear();
   }
 
@@ -74,6 +94,7 @@ class _ChattingPageState extends State<ChattingPage> {
                   .collection("chatrooms")
                   .doc(widget.chatRoom.id)
                   .collection("messages")
+              .orderBy("createdOn")
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
@@ -121,6 +142,7 @@ class _ChattingPageState extends State<ChattingPage> {
                     "Enter a message",
                     msgEditingController,
                   ),
+
                 ),
                 IconButton(
                   icon: Icon(Icons.send),
