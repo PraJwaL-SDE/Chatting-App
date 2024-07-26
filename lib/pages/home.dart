@@ -1,6 +1,8 @@
 import 'package:chatting_app_2/helper/GetServerKey.dart';
 import 'package:chatting_app_2/helper/firebase_helper.dart';
+import 'package:chatting_app_2/helper/widget_helper.dart';
 import 'package:chatting_app_2/models/user.dart';
+import 'package:chatting_app_2/pages/login.dart';
 import 'package:chatting_app_2/pages/search_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -121,12 +123,39 @@ class _HomeState extends State<Home> {
     }
   }
 
+  void logout() async {
+    WidgetHelper.loadingDialog(context, "SignOut...");
+    await FirebaseAuth.instance.signOut();
+    Navigator.popUntil(context,(route)=>route.isFirst);
+    Navigator.push(context, MaterialPageRoute(builder: (context)=>Login()));
+
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text("Chatting App"),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.logout,
+            ),
+            onPressed: (){
+              logout();
+            },
+          ),
+          SizedBox(width: 20,)
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
+
         child: Icon(Icons.search_rounded),
+
         onPressed: () {
+          // WidgetHelper.loadingDialog(context, "Loading");
+          // WidgetHelper.errorDialog(context, "search", "You can search here using there email address");
           Navigator.push(
             context,
             MaterialPageRoute(

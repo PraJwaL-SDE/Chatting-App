@@ -25,6 +25,7 @@ class _LoginState extends State<Login> {
     String passwordText = passWordController.text.trim();
 
     if (emailText.isEmpty || passwordText.isEmpty) {
+      WidgetHelper.errorDialog(context, "Incomplete Data", "Please fill in all values");
       print("Please fill in all values");
       return;
     } else {
@@ -34,59 +35,47 @@ class _LoginState extends State<Login> {
 
   void signIn(String email, String password) async {
     try {
+      WidgetHelper.loadingDialog(context, "Logging in ..");
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      if(userCredential!=null){
+      if (userCredential.user != null) {
         UserModel? user = await FirebaseHelper.getUserModelById(userCredential.user!.uid);
-        NotificationServices notificationServices = NotificationServices();
-        user!.deviceToken = await notificationServices.getDeviceToken();
-        await FirebaseFirestore.instance.collection("user").doc(user?.uid).set(
-            user!.toMap());
-        Navigator.push(context, MaterialPageRoute(
-            builder: (context)=> Home(userModel: user!,firebaseUser: userCredential!.user,)));
-      }
 
-      
-      print(userCredential.user!.uid.toString());
+        if (user != null) {
+          NotificationServices notificationServices = NotificationServices();
+          user.deviceToken = await notificationServices.getDeviceToken();
+          await FirebaseFirestore.instance.collection("user").doc(user.uid).set(user.toMap());
+
+          // Close the loading dialog before navigating
+          Navigator.pop(context);
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Home(userModel: user, firebaseUser: userCredential.user!),
+            ),
+          );
+        } else {
+          Navigator.pop(context); // Close the loading dialog
+          WidgetHelper.errorDialog(context, "User Error", "User model could not be retrieved.");
+        }
+      }
     } on FirebaseAuthException catch (e) {
+      Navigator.pop(context); // Close the loading dialog
+
       if (e.code == 'user-not-found') {
-        _showMyDialog("No user found for that email.");
+        WidgetHelper.errorDialog(context, "User Not Found", e.message!);
         print('No user found for that email.');
       } else if (e.code == 'wrong-password') {
-        _showMyDialog("Wrong password provided for that user.");
+        WidgetHelper.errorDialog(context, e.code, e.message!);
         print('Wrong password provided for that user.');
+      } else {
+        WidgetHelper.errorDialog(context, "Error", e.message!);
       }
     }
-  }
-
-  Future<void> _showMyDialog(String text) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false, // user must tap button!
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('AlertDialog Title'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text(text),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Approve'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void signup() {

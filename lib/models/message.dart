@@ -5,9 +5,10 @@ class Message {
   String? text;
   bool? seen;
   DateTime? createdOn;
+  String? type;
 
   // Constructor
-  Message({this.messageId,this.sender, this.text, this.seen, this.createdOn});
+  Message({this.messageId,this.sender, this.text, this.seen, this.createdOn, this.type});
 
   // Named constructor to create an instance from a map
   factory Message.fromMap(Map<String, dynamic> map) {
@@ -16,7 +17,8 @@ class Message {
       sender: map['sender'],
       text: map['text'],
       seen: map['seen'],
-      createdOn: map['createdOn'],
+      // createdOn: map['createdOn'],
+        type : map['type']
     );
   }
 
@@ -28,6 +30,7 @@ class Message {
       'text': text,
       'seen': seen,
       'createdOn': createdOn,
+      'type' : type
     };
   }
 }

@@ -64,10 +64,13 @@ class _SignUpState extends State<SignUp> {
         profilePic: ""
       );
       try {
+        WidgetHelper.loadingDialog(context, "Creating New Account.." );
         await FirebaseFirestore.instance.collection("user").doc(uid).set(
             user.toMap());
+        Navigator.popUntil(context,(route)=>route.isFirst);
         Navigator.push(context, MaterialPageRoute(builder: (context)=> CompleteProfile(userModel: user,firebaseUser: userCredential!.user,)));
       } on FirebaseException catch(e){
+        Navigator.pop(context);
         print(e.code.toString());
       }
 

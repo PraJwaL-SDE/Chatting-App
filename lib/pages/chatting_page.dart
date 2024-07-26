@@ -1,8 +1,10 @@
+import 'package:chatting_app_2/helper/image_upload.dart';
 import 'package:chatting_app_2/helper/notification_services.dart';
 import 'package:chatting_app_2/helper/widget_helper.dart';
 import 'package:chatting_app_2/models/chat_room.dart';
 import 'package:chatting_app_2/models/message.dart';
 import 'package:chatting_app_2/models/user.dart';
+import 'package:chatting_app_2/pages/image_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -31,16 +33,23 @@ class _ChattingPageState extends State<ChattingPage> {
   TextEditingController msgEditingController = TextEditingController();
   Uuid uuid = Uuid();
   NotificationServices notificationServices = NotificationServices();
-
+  ScrollController _scrollController = ScrollController();
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_){
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+        }
+    );
 
   }
 
-  void sendMsg() {
-    String msgText = msgEditingController.text.trim();
+  void sendMsg(String msgText,String type) {
+
     if (msgText == "") return;
     Message message = Message(
       messageId: uuid.v1(),
@@ -48,6 +57,7 @@ class _ChattingPageState extends State<ChattingPage> {
       sender: widget.userModel.uid,
       seen: false,
       createdOn: DateTime.now(),
+      type: type
     );
 
     FirebaseFirestore.instance
@@ -60,19 +70,26 @@ class _ChattingPageState extends State<ChattingPage> {
     widget.targetUser!.deviceToken!,
         RemoteMessage(
           notification: RemoteNotification(
-            title: widget.targetUser.name!,
+            title: widget.userModel.name!,
             body: msgText,
 
           )
         ));
     msgEditingController.clear();
   }
+  // get Img from gallery
+  void sendImg() async {
+    String? imgUrl = await ImageUpload.uploadImage(context);
+    if(imgUrl!=null){
+      sendMsg(imgUrl, "image");
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-
         title: Row(
           children: [
             CircleAvatar(
@@ -94,15 +111,20 @@ class _ChattingPageState extends State<ChattingPage> {
                   .collection("chatrooms")
                   .doc(widget.chatRoom.id)
                   .collection("messages")
-              .orderBy("createdOn")
+              .orderBy("createdOn", descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   var messages = snapshot.data!.docs;
+
                   return ListView.builder(
+                    reverse: true,
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       var message = messages[index];
+                      // get message model for load content
+                      Message msgModel = Message.fromMap(message.data() as Map<String,dynamic>);
+                      DateTime dateTime = message['createdOn'].toDate();
                       bool isSentByUser = message["sender"] == widget.userModel.uid;
                       return Align(
                         alignment: isSentByUser
@@ -115,11 +137,52 @@ class _ChattingPageState extends State<ChattingPage> {
                             color: isSentByUser ? Colors.blue : Colors.grey[300],
                             borderRadius: BorderRadius.circular(12.0),
                           ),
-                          child: Text(
-                            message["text"],
-                            style: TextStyle(
-                              color: isSentByUser ? Colors.white : Colors.black,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: isSentByUser? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                            children: [
+                              msgModel.type == "image" ?
+                                  Container(
+                                    height: 300,
+
+                                      width: 300,
+                                      child: GestureDetector(
+                                        onTap: (){
+                                          Navigator.push(context, MaterialPageRoute(builder: (context)=>ImageView(imageUrl: msgModel.text!)));
+                                        },
+                                        child: Image.network(
+                                            msgModel.text!,
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (BuildContext context, Widget child,
+                                              ImageChunkEvent? loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return Center(
+                                              child: CircularProgressIndicator(
+                                                value: loadingProgress.expectedTotalBytes != null
+                                                    ? loadingProgress.cumulativeBytesLoaded /
+                                                    loadingProgress.expectedTotalBytes!
+                                                    : null,
+                                              ),
+                                            );
+                                          },
+
+                                        ),
+                                      )
+                                  ) :
+                              Text(
+                                message["text"],
+                                style: TextStyle(
+                                  color: isSentByUser ? Colors.white : Colors.black,
+                                  fontSize: 18
+                                ),
+                              ),
+                              Text(
+                                  dateTime.hour.toString().padLeft(2,'0')+":"+dateTime.minute.toString().padLeft(2,'0'),
+                                style: TextStyle(
+                                  fontSize: 13
+                                ),
+
+                              )
+                            ],
                           ),
                         ),
                       );
@@ -145,8 +208,14 @@ class _ChattingPageState extends State<ChattingPage> {
 
                 ),
                 IconButton(
+                    onPressed: sendImg,
+                    icon: Icon(Icons.image)),
+                IconButton(
                   icon: Icon(Icons.send),
-                  onPressed: sendMsg,
+                  onPressed: (){
+                    String msgText = msgEditingController.text.trim();
+                    sendMsg(msgText,"text");
+                  },
                 ),
               ],
             ),

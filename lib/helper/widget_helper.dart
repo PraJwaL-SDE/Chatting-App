@@ -57,4 +57,50 @@ class WidgetHelper{
       subtitle: Text(userModel.email!),
     );
   }
+
+  static Future<void> loadingDialog(BuildContext context, String text){
+    AlertDialog alertDialog = AlertDialog(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(18.0),
+            child: CircularProgressIndicator(
+              color: Colors.lightBlue,
+              strokeWidth: 6,
+            ),
+          ),
+
+          Text(text)
+        ],
+      ),
+    );
+
+    return showDialog(context: context, builder: (context){
+      return alertDialog;
+    });
+  }
+
+  static Future<void> errorDialog(BuildContext context, String title , String content)async{
+    AlertDialog alertDialog = AlertDialog(
+      title: Center(child: Text(title)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+
+          Text(content),
+          SizedBox(height: 10,),
+          Center(
+            child: ElevatedButton(onPressed: ()=>Navigator.pop(context),
+                child: Text("ok")
+            ),
+          )
+        ],
+      ),
+    );
+    return showDialog(context: context, builder: (context){
+      return alertDialog;
+    });
+  }
+
 }
