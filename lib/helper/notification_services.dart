@@ -7,6 +7,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:googleapis_auth/auth.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
+import 'package:chatting_app_2/models/message.dart';
+
 
 import 'GetServerKey.dart';
 
@@ -37,7 +39,7 @@ class NotificationServices{
     return client.credentials.accessToken.data;
   }
 
-  void sendNotificationToTarget(String targetToken, RemoteMessage message) async {
+  void sendNotificationToTarget(String targetToken, RemoteMessage message, MessageModel msgModel) async {
     final accessToken = await getAccessToken();
     print("Access Token: $accessToken");
 
@@ -46,17 +48,25 @@ class NotificationServices{
         'token': targetToken,
         'notification': {
           'title': message.notification?.title ?? 'Default Title',
-          'body': message.notification?.body ?? 'Default Body'
+          'body': msgModel.type == "text"
+              ? (message.notification?.body ?? 'Default Body')
+              : (msgModel.type == "image"
+              ? 'Image' // Placeholder, 'body' is now the image URL or description
+              : 'Not a text message'),
+          // Include an optional 'image' field if type is 'image'
+          if (msgModel.type == "image") 'image': msgModel.text ?? 'Default Image URL',
         },
         'data': {
           'click_action': 'FLUTTER_NOTIFICATION_CLICK',  // Ensures the notification opens the app
           'id': '1',  // Custom data
-          'status': 'done'  // Custom data
+          'status': 'done',  // Custom data
         },
         'android': {
           'priority': 'high',  // Ensures notification is delivered promptly
           'notification': {
             'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+            // Optional image field for Android notifications
+            if (msgModel.type == "image") 'image': msgModel.text ?? 'Default Image URL',
           },
         },
         'apns': {
@@ -65,7 +75,11 @@ class NotificationServices{
               'content-available': 1,
               'alert': {
                 'title': message.notification?.title ?? 'Default Title',
-                'body': message.notification?.body ?? 'Default Body',
+                'body': msgModel.type == "text"
+                    ? (message.notification?.body ?? 'Default Body')
+                    : (msgModel.type == "image"
+                    ? 'Image URL' // Placeholder, 'body' is now the image URL or description
+                    : 'Not a text message'),
               },
             },
           },
@@ -75,6 +89,7 @@ class NotificationServices{
         },
       }
     };
+
 
     final response = await http.post(
       Uri.parse('https://fcm.googleapis.com/v1/projects/chatting-app-2-8e7d4/messages:send'),

@@ -1,5 +1,5 @@
 
-class Message {
+class MessageModel {
   String? messageId;
   String? sender;
   String? text;
@@ -8,11 +8,11 @@ class Message {
   String? type;
 
   // Constructor
-  Message({this.messageId,this.sender, this.text, this.seen, this.createdOn, this.type});
+  MessageModel({this.messageId,this.sender, this.text, this.seen, this.createdOn, this.type});
 
   // Named constructor to create an instance from a map
-  factory Message.fromMap(Map<String, dynamic> map) {
-    return Message(
+  factory MessageModel.fromMap(Map<String, dynamic> map) {
+    return MessageModel(
       messageId:map['messageId'],
       sender: map['sender'],
       text: map['text'],

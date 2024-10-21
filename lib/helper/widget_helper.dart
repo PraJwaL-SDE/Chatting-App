@@ -48,6 +48,7 @@ class WidgetHelper{
         ),)
     );
   }
+
   static Widget tileFromUserModel(UserModel userModel,dynamic onPressed){
 
     return ListTile(
@@ -103,4 +104,18 @@ class WidgetHelper{
     });
   }
 
+  static Widget callIconBtn(IconData icon , onPressed){
+    return Container(
+      height: 100,
+      width: 100,
+      child: ElevatedButton(
+          onPressed: onPressed,
+          child: Icon(
+              icon,
+            size: 40,
+            color: Colors.lightBlue,
+          )
+      ),
+    );
+  }
 }

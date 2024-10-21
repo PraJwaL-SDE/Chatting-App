@@ -1,5 +1,6 @@
 import 'package:chatting_app_2/helper/image_upload.dart';
 import 'package:chatting_app_2/helper/notification_services.dart';
+import 'package:chatting_app_2/helper/show_files.dart';
 import 'package:chatting_app_2/helper/widget_helper.dart';
 import 'package:chatting_app_2/models/chat_room.dart';
 import 'package:chatting_app_2/models/message.dart';
@@ -51,7 +52,7 @@ class _ChattingPageState extends State<ChattingPage> {
   void sendMsg(String msgText,String type) {
 
     if (msgText == "") return;
-    Message message = Message(
+    MessageModel message = MessageModel(
       messageId: uuid.v1(),
       text: msgText,
       sender: widget.userModel.uid,
@@ -72,9 +73,10 @@ class _ChattingPageState extends State<ChattingPage> {
           notification: RemoteNotification(
             title: widget.userModel.name!,
             body: msgText,
-
           )
-        ));
+        ),
+        message
+    );
     msgEditingController.clear();
   }
   // get Img from gallery
@@ -107,6 +109,7 @@ class _ChattingPageState extends State<ChattingPage> {
         children: [
           Expanded(
             child: StreamBuilder(
+              // get all messages in decending oreder
               stream: FirebaseFirestore.instance
                   .collection("chatrooms")
                   .doc(widget.chatRoom.id)
@@ -123,7 +126,7 @@ class _ChattingPageState extends State<ChattingPage> {
                     itemBuilder: (context, index) {
                       var message = messages[index];
                       // get message model for load content
-                      Message msgModel = Message.fromMap(message.data() as Map<String,dynamic>);
+                      MessageModel msgModel = MessageModel.fromMap(message.data() as Map<String,dynamic>);
                       DateTime dateTime = message['createdOn'].toDate();
                       bool isSentByUser = message["sender"] == widget.userModel.uid;
                       return Align(
@@ -141,33 +144,48 @@ class _ChattingPageState extends State<ChattingPage> {
                             crossAxisAlignment: isSentByUser? CrossAxisAlignment.end : CrossAxisAlignment.start,
                             children: [
                               msgModel.type == "image" ?
-                                  Container(
-                                    height: 300,
+                        //   FutureBuilder<Widget>(
+                        //   future: ShowFiles.showVideo(context, msgModel), // Your future call
+                        //   builder: (BuildContext context, AsyncSnapshot<Widget> snapshot) {
+                        //     if (snapshot.connectionState == ConnectionState.waiting) {
+                        //       // While the Future is loading, show a loading spinner
+                        //       return Center(child: CircularProgressIndicator());
+                        //     } else if (snapshot.hasError) {
+                        //       // If there was an error, display it
+                        //       return Center(child: Text("Error: ${snapshot.error}"));
+                        //     } else {
+                        //       // Once the Future is complete, return the video widget
+                        //       return snapshot.data!;
+                        //     }
+                        //   },
+                        // )
+                              Container(
+                                  height: 300,
+                                  width: 300,
+                                  child: GestureDetector(
+                                    onTap: (){
+                                      Navigator.push(context, MaterialPageRoute(builder: (context)=>ImageView(imageUrl: msgModel.text!)));
+                                    },
+                                    child: Image.network(
+                                      msgModel.text!,
+                                      fit: BoxFit.cover,
+                                      loadingBuilder: (BuildContext context, Widget child,
+                                          ImageChunkEvent? loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        );
+                                      },
 
-                                      width: 300,
-                                      child: GestureDetector(
-                                        onTap: (){
-                                          Navigator.push(context, MaterialPageRoute(builder: (context)=>ImageView(imageUrl: msgModel.text!)));
-                                        },
-                                        child: Image.network(
-                                            msgModel.text!,
-                                          fit: BoxFit.cover,
-                                          loadingBuilder: (BuildContext context, Widget child,
-                                              ImageChunkEvent? loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return Center(
-                                              child: CircularProgressIndicator(
-                                                value: loadingProgress.expectedTotalBytes != null
-                                                    ? loadingProgress.cumulativeBytesLoaded /
-                                                    loadingProgress.expectedTotalBytes!
-                                                    : null,
-                                              ),
-                                            );
-                                          },
-
-                                        ),
-                                      )
-                                  ) :
+                                    ),
+                                  )
+                              )
+                                  :
                               Text(
                                 message["text"],
                                 style: TextStyle(

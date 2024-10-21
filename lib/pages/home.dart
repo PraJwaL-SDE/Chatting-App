@@ -1,7 +1,10 @@
 import 'package:chatting_app_2/helper/GetServerKey.dart';
 import 'package:chatting_app_2/helper/firebase_helper.dart';
 import 'package:chatting_app_2/helper/widget_helper.dart';
+import 'package:chatting_app_2/models/group_chat_room.dart';
 import 'package:chatting_app_2/models/user.dart';
+import 'package:chatting_app_2/pages/group_chat/create_new_group.dart';
+import 'package:chatting_app_2/pages/group_chat/group_chatting_page.dart';
 import 'package:chatting_app_2/pages/login.dart';
 import 'package:chatting_app_2/pages/search_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -42,9 +45,6 @@ class _HomeState extends State<Home> {
     // ));h
 
 
-
-
-
   }
 
 
@@ -80,7 +80,12 @@ class _HomeState extends State<Home> {
 
       if (querySnapshot.docs.isNotEmpty) {
         Map<String, dynamic> chatroomMap = querySnapshot.docs[0].data() as Map<String, dynamic>;
+        if(chatroomMap["type"]=="dm")
         chatRoom = ChatRoom.FromMap(chatroomMap);
+        else
+          {
+
+          }
       } else {
         chatRoom = ChatRoom(
           id: uuid.v1(),
@@ -88,6 +93,7 @@ class _HomeState extends State<Home> {
             user.uid!: true,
             targetUser.uid!: true,
           },
+          type: "dm"
         );
 
         await FirebaseFirestore.instance
@@ -122,12 +128,27 @@ class _HomeState extends State<Home> {
       }
     }
   }
+  // first get all data
+
+  // check the type of chatroom
+  // Navigate to DM chat room
+  // Navigate to group chatroom
+  void goToGroupChattingPage(GroupChatRoom chatroom){
+
+    Navigator.push(context, MaterialPageRoute(
+        builder: (context)=>GroupChattingPage(chatRoom: chatroom, userModel: widget.userModel)));
+  }
+
 
   void logout() async {
     WidgetHelper.loadingDialog(context, "SignOut...");
     await FirebaseAuth.instance.signOut();
     Navigator.popUntil(context,(route)=>route.isFirst);
     Navigator.push(context, MaterialPageRoute(builder: (context)=>Login()));
+
+  }
+  CreateNewGroup(){
+    Navigator.push(context, MaterialPageRoute(builder: (context)=>CreateNewGroupScreen(userModel: widget.userModel)));
 
   }
 
@@ -138,14 +159,49 @@ class _HomeState extends State<Home> {
       appBar: AppBar(
         title: Text("Chatting App"),
         actions: [
-          IconButton(
-            icon: Icon(
-              Icons.logout,
-            ),
-            onPressed: (){
-              logout();
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert), // Icon for the popup menu
+            onSelected: (String result) {
+              switch (result) {
+                case 'logout':
+                // Call the logout function
+                  logout();
+                  break;
+                case 'CreteGroup':
+                  CreateNewGroup();
+                  break;
+                case 'settings':
+                // Navigate to settings page
+                //   navigateToSettings();
+                  break;
+                case 'profile':
+                // Navigate to profile page
+                //   navigateToProfile();
+                  break;
+                default:
+                  break;
+              }
             },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'profile',
+                child: Text('Profile'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'CreteGroup',
+                child: Text('Crete new Group'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'settings',
+                child: Text('Settings'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Text('Logout'),
+              ),
+            ],
           ),
+
           SizedBox(width: 20,)
         ],
       ),
@@ -179,42 +235,28 @@ class _HomeState extends State<Home> {
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   var chatrooms = snapshot.data!.docs;
+                  print("participants fetche : ${chatrooms.length}" );
                   return ListView.builder(
                     itemCount: chatrooms.length,
                     itemBuilder: (context, index) {
-                      var chatroom = chatrooms[index];
-                      var participants = chatroom['participants'] as Map<String, dynamic>;
-                      var currentUid = widget.userModel.uid;
-                      var targetUid = participants.keys.firstWhere((uid) => uid != currentUid);
+                      // Extract the data from the document
+                      var chatroom = chatrooms[index].data() as Map<String, dynamic>;
 
-                      return FutureBuilder<UserModel?>(
-                        future: FirebaseHelper.getUserModelById(targetUid),
-                        builder: (context, userSnapshot) {
-                          if (userSnapshot.hasData) {
-                            var user = userSnapshot.data!;
-                            return ListTile(
-                              onTap: () {
-                                setState(() {
-                                  targetUser = user;
-                                });
-                                goToChattingPage();
-                              },
-                              leading: Image.network(user.profilePic!),
-                              title: Text(user.name!),
-                              subtitle: Text(user.email!),
-                            );
-                          } else if (userSnapshot.hasError) {
-                            return ListTile(
-                              title: Text('Error loading user'),
-                              subtitle: Text(userSnapshot.error.toString()),
-                            );
-                          } else {
-                            return ListTile(
-                              title: Text('Loading...'),
-                            );
-                          }
-                        },
-                      );
+                      // Provide a default value "dm" if type is not defined
+                      var type = chatroom["type"] ?? "dm";
+
+                      // Safely extract participants, default to an empty map if not present
+                      var participants = chatroom['participants'] as Map<String, dynamic>? ?? {};
+
+                      var currentUid = widget.userModel.uid;
+
+                      if (type == "dm") {
+                        return dmChatroomListTile(participants, currentUid);
+                      } else {
+                        // Safely access chatroom ID
+                        var chatroomId = chatroom["id"] ?? "unknown";
+                        return groupChatroomListTile(chatroomId);
+                      }
                     },
                   );
                 } else if (snapshot.hasError) {
@@ -224,9 +266,83 @@ class _HomeState extends State<Home> {
                 }
               },
             ),
+
           ),
         ],
       ),
     );
+  }
+  Widget dmChatroomListTile(participants,currentUid){
+    var targetUid = participants.keys.firstWhere((uid) => uid != currentUid);
+
+    return FutureBuilder<UserModel?>(
+      future: FirebaseHelper.getUserModelById(targetUid),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.hasData) {
+          var user = userSnapshot.data!;
+          return ListTile(
+            onTap: () {
+              setState(() {
+                targetUser = user;
+              });
+
+              goToChattingPage();
+            },
+            leading: Image.network(user.profilePic!),
+            title: Text(user.name!),
+            subtitle: Text(user.email!),
+          );
+        } else if (userSnapshot.hasError) {
+          return ListTile(
+            title: Text('Error loading user'),
+            subtitle: Text(userSnapshot.error.toString()),
+          );
+        } else {
+          return ListTile(
+            title: Text('Loading...'),
+          );
+        }
+      },
+    );
+  }
+  Widget groupChatroomListTile(id){
+    String defaultGroupIcon =
+        "https://cdn-icons-png.flaticon.com/128/11820/11820089.png";
+
+    return FutureBuilder<GroupChatRoom?>(
+        future: FirebaseHelper.getGroupChatRoomById(id),
+        builder: (context,snapshot){
+          if(snapshot.hasData){
+            GroupChatRoom chatRoom = snapshot.data! ;
+
+            return ListTile(
+                    onTap: (){
+                      goToGroupChattingPage(chatRoom);
+
+                    },
+                    leading: CircleAvatar(
+                      backgroundImage: NetworkImage(chatRoom.groupIcon ?? defaultGroupIcon),
+                      radius: 30,
+                    ),
+                    title: Text(chatRoom.name!),
+                    subtitle: Text("Group"),
+            );
+
+          }
+          else if (snapshot.hasError) {
+            return ListTile(
+              title: Text('Error loading user'),
+              subtitle: Text(snapshot.error.toString()),
+            );
+          } else {
+            return ListTile(
+              title: Text('Loading...'),
+            );
+          }
+        }
+    );
+
+
+
   }
 }

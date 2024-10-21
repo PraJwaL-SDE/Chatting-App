@@ -95,7 +95,28 @@ class _LoginState extends State<Login> {
           children: [
             WidgetHelper.textFieldBuilder("Email", emailController),
             SizedBox(height: 10),
-            WidgetHelper.textFieldBuilder("Password", passWordController),
+            // WidgetHelper.textFieldBuilder("Password", passWordController),
+            TextField(
+              controller: passWordController,
+              obscureText: true,
+
+              decoration: InputDecoration(
+                  labelText: "Password",
+                  enabledBorder:  OutlineInputBorder(
+                    borderSide:  BorderSide(
+                      color: Colors.deepPurpleAccent,
+                      width: 1.0,
+
+                    ),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  focusedBorder:  OutlineInputBorder(
+                    borderSide:  BorderSide(color: Colors.indigo, width: 2.0,
+                    ),
+                    borderRadius: BorderRadius.circular(5.0),
+                  )
+              ),
+            ),
             SizedBox(height: 10),
             SizedBox(height: 50),
             Container(
